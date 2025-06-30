@@ -1,0 +1,88 @@
+networks:
+  order-network:
+    name: order-network
+    driver: bridge
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: zookeeper
+    networks:
+      - order-network
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka
+    networks:
+      - order-network
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/kafka/9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "9092:9092"
+
+  postgres:
+    image: postgres:latest
+    volumes:
+      - ../init/01-init-user-db.sh:/docker-entrypoint-initdb.d/init-user-db.sh:ro
+    networks:
+      - order-network
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      MY_USER: myuser
+      MY_PASSWORD: mypassword
+      MY_DB: mydb
+    ports:
+      - "6432:5432"
+    restart: unless-stopped
+
+  order-migrators:
+    build:
+      context: ./ 
+      dockerfile: ./cmd/migrators/Dockerfile
+    container_name: order-migrators
+    networks:
+      - order-network
+    env_file:
+      - ./.env
+    ports:
+      - "9093:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      zookeeper:
+        condition: service_started
+      postgres:
+        condition: service_started
+
+  order-api:
+    build:
+      context: ./
+      dockerfile: ./cmd/api/Dockerfile
+    container_name: order-api
+    networks:
+      - order-network
+    env_file:
+      - ./.env
+    ports:
+      - "9090:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      zookeeper:
+        condition: service_started
+      postgres:
+        condition: service_started

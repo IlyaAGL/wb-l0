@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div 
+    style="max-width:400px;
+    margin:40px auto;
+    font-family:sans-serif;">
+        <input id="inputField" type="text" placeholder="Введите значение..." 
+        style="width:70%;
+        padding:8px;">
+        <button onclick="sendRequest()" 
+        style="padding:8px 16px;">Отправить</button>
+        <pre 
+        id="result" 
+        style="background:#f4f4f4;
+        padding:16px;
+        margin-top:20px;
+        overflow:auto;"></pre>
+    </div>
+    <script>
+        function sendRequest() {
+            const value = document.getElementById('inputField').value;
+            const url = `http://localhost:9090/orders/${encodeURIComponent(value)}`;
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    document.getElementById('result').textContent = 'Ошибка: ' + error;
+                });
+        }
+    </script>
+</body>
+</html>

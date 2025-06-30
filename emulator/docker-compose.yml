@@ -1,0 +1,15 @@
+networks:
+  order-network:
+    name: order-network
+    driver: bridge
+
+services:
+  producers:
+    build:
+      context: ./
+      dockerfile: ./startpoint/Dockerfile
+    container_name: producers
+    networks:
+      - order-network
+    ports:
+      - "1234:1234"
